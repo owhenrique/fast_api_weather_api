@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SuWeather</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #e0f2ff 0%, #fafafa 60%);
+      backdrop-filter: blur(20px);
+      -webkit-font-smoothing: antialiased;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+    }
+    .label { @apply text-xs uppercase tracking-wide text-slate-500; }
+    .muted { @apply text-sm text-slate-600; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 text-slate-800">
+
+  <main class="max-w-3xl w-full space-y-6">
+
+    <header class="text-center">
+      <h1 class="text-4xl font-bold text-sky-700 drop-shadow-sm mb-1">SuWeather</h1>
+      <p class="muted">Meu projeto de clima e previsão do tempo</p>
+    </header>
+
+    <!-- FORM -->
+    <section class="glass p-6">
+      <form id="form" class="flex gap-2">
+        <input id="location" type="text" placeholder="Digite um local (ex: Gama)"
+               class="flex-1 px-4 py-3 rounded-xl border border-slate-300/70 bg-white/60 focus:ring-2 focus:ring-sky-300 outline-none shadow-sm" />
+        <button id="btn" type="submit" class="px-5 py-3 rounded-xl bg-sky-600 text-white font-medium shadow hover:bg-sky-700 transition">Buscar</button>
+      </form>
+    </section>
+
+    <!-- RESULT -->
+    <section id="result" class="glass p-6 hidden space-y-6">
+
+      <div class="flex items-center justify-between">
+        <div>
+          <div id="loc" class="text-2xl font-semibold">—</div>
+          <div id="tz" class="muted">—</div>
+        </div>
+        <img id="icon" src="" alt="icon" class="w-14 h-14 opacity-80" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <div class="label">Temperatura</div>
+          <div id="temp" class="text-4xl font-bold text-amber-600">—</div>
+        </div>
+
+        <div>
+          <div class="label">Sensação</div>
+          <div id="feels" class="text-3xl font-semibold text-amber-700">—</div>
+        </div>
+
+        <div>
+          <div class="label">Umidade</div>
+          <div id="humidity" class="text-lg">—</div>
+        </div>
+
+        <div>
+          <div class="label">Vento</div>
+          <div id="wind" class="text-lg">—</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <div class="label">Nascer do Sol</div>
+          <div id="sunrise" class="font-medium">—</div>
+        </div>
+        <div>
+          <div class="label">Pôr do Sol</div>
+          <div id="sunset" class="font-medium">—</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">Condições</div>
+        <div id="conditions" class="muted">—</div>
+      </div>
+
+      <!-- MINI GRAPH -->
+      <div class="mt-6">
+        <div class="label mb-1">Variação estimada de temperatura</div>
+        <canvas id="tempChart" height="100"></canvas>
+      </div>
+
+    </section>
+
+    <section id="error" class="glass hidden p-4 bg-rose-100/60 border border-rose-200 text-rose-800">
+      <div class="font-semibold text-lg">Erro</div>
+      <pre id="error_text" class="mt-2 text-sm whitespace-pre-wrap"></pre>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const form = document.getElementById('form');
+    const locationInput = document.getElementById('location');
+    const resultSection = document.getElementById('result');
+    const errorSection = document.getElementById('error');
+    const errorText = document.getElementById('error_text');
+    const iconImg = document.getElementById('icon');
+
+    let chart;
+
+    // URL base única para os ícones
+    const ICON_BASE =
+      "https://raw.githubusercontent.com/visualcrossing/WeatherIcons/main/PNG/1st%20Set%20-%20Color/";
+
+    function fToC(f){ return ((f - 32) * 5/9).toFixed(1); }
+
+    function renderChart(baseTempC){
+      const ctx = document.getElementById('tempChart').getContext('2d');
+      if(chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Agora', '+1h', '+2h', '+3h', '+4h'],
+          datasets: [{
+            data: [baseTempC, baseTempC-0.5, baseTempC+0.3, baseTempC-1, baseTempC-0.2],
+            borderWidth: 2,
+            tension: 0.3
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { display: false }, x: { display: false } }
+        }
+      });
+    }
+
+    function showResult(data){
+      errorSection.classList.add('hidden');
+      resultSection.classList.remove('hidden');
+
+      const msg = data.message || data;
+      const cc = msg.currentConditions;
+
+      document.getElementById('loc').textContent = msg.location;
+      document.getElementById('tz').textContent = msg.timezone;
+
+      const tempC = fToC(cc.temp);
+      document.getElementById('temp').textContent = tempC + '°C';
+      document.getElementById('feels').textContent = fToC(cc.feelslike) + '°C';
+
+      document.getElementById('humidity').textContent = cc.humidity + '%';
+      document.getElementById('wind').textContent = cc.windspeed + ' km/h';
+      document.getElementById('conditions').textContent = cc.conditions;
+
+      document.getElementById('sunrise').textContent = cc.sunrise;
+      document.getElementById('sunset').textContent = cc.sunset;
+
+      // Monta automaticamente o link do ícone
+      iconImg.src = `${ICON_BASE}${cc.icon}.png`;
+
+      renderChart(parseFloat(tempC));
+    }
+
+    function showError(text){
+      resultSection.classList.add('hidden');
+      errorSection.classList.remove('hidden');
+      errorText.textContent = text;
+    }
+
+    async function fetchWeather(location){
+      try{
+        const url = location
+          ? `http://localhost:8000/weathers?location=${encodeURIComponent(location)}`
+          : `http://localhost:8000/weathers`;
+
+        const res = await fetch(url);
+        const raw = await res.text();
+
+        let data;
+        try { data = JSON.parse(raw); }
+        catch { return showError('Resposta inválida da API'); }
+
+        if(!res.ok){
+          const detail = data.detail ?? data;
+          const msg = typeof detail === 'string' ? detail : detail.message || detail.response;
+          return showError(msg);
+        }
+
+        showResult(data);
+      }
+      catch(err){ showError(String(err)); }
+    }
+
+    form.addEventListener('submit', ev =>{
+      ev.preventDefault();
+      fetchWeather(locationInput.value.trim());
+    });
+  </script>
+</body>
+</html>
