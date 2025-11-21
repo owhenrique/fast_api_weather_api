@@ -55,6 +55,7 @@ async def read_location_weather(location: str):
                 'status_code': response.status_code,
                 'location': data['resolvedAddress'],
                 'timezone': data['timezone'],
+                'alerts': data['alerts'],
                 'currentConditions': data['currentConditions']
             }
 

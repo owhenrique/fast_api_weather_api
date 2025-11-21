@@ -20,8 +20,17 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
       box-shadow: 0 4px 30px rgba(0,0,0,0.05);
     }
-    .label { @apply text-xs uppercase tracking-wide text-slate-500; }
-    .muted { @apply text-sm text-slate-600; }
+      .label {
+        font-weight: 700; /* font-bold */
+        font-size: 1rem; /* text-xs */
+        text-transform: uppercase; /* uppercase */
+        letter-spacing: 0.05em; /* tracking-wide */
+        color: rgb(100 116 139); /* text-slate-500 */
+    }
+    .muted {
+      font-size: 0.875rem;     /* text-sm */
+      color: rgb(71 85 105);   /* text-slate-600 */
+    }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-6 text-slate-800">
@@ -36,7 +45,7 @@
     <!-- FORM -->
     <section class="glass p-6">
       <form id="form" class="flex gap-2">
-        <input id="location" type="text" placeholder="Digite um local (ex: Gama)"
+        <input id="location" type="text" placeholder="Digite um local, por exemplo: Gama (df)"
                class="flex-1 px-4 py-3 rounded-xl border border-slate-300/70 bg-white/60 focus:ring-2 focus:ring-sky-300 outline-none shadow-sm" />
         <button id="btn" type="submit" class="px-5 py-3 rounded-xl bg-sky-600 text-white font-medium shadow hover:bg-sky-700 transition">Buscar</button>
       </form>
@@ -49,6 +58,7 @@
         <div>
           <div id="loc" class="text-2xl font-semibold">—</div>
           <div id="tz" class="muted">—</div>
+          <div id="time" class="muted">—</div>
         </div>
         <img id="icon" src="" alt="icon" class="w-14 h-14 opacity-80" />
       </div>
@@ -86,9 +96,16 @@
         </div>
       </div>
 
-      <div>
-        <div class="label">Condições</div>
-        <div id="conditions" class="muted">—</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <div class="label">Condições</div>
+          <div id="conditions" class="font-medium">—</div>
+        </div>
+        <div>
+          <div class="label text-rose-800">Alertas</div>
+          <div id="alerts" class="font-medium">—</div>
+        </div>
+
       </div>
 
       <!-- MINI GRAPH -->
@@ -150,9 +167,12 @@
 
       const msg = data.message || data;
       const cc = msg.currentConditions;
+      const alerts = msg.alerts;
 
       document.getElementById('loc').textContent = msg.location;
       document.getElementById('tz').textContent = msg.timezone;
+      document.getElementById('time').textContent = cc.datetime;
+      document.getElementById('alerts').textContent = alerts[0]?.event ?? "Nenhum alerta ativo";
 
       const tempC = fToC(cc.temp);
       document.getElementById('temp').textContent = tempC + '°C';
